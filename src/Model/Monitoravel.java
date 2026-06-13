@@ -1,5 +1,5 @@
 package Model;
 
 public interface Monitoravel {
-	void monitorar();
+    void monitorar();
 }

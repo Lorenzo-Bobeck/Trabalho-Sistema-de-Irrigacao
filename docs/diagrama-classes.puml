@@ -1,0 +1,76 @@
+@startuml
+skinparam classAttributeIconSize 0
+
+interface Monitoravel {
+  +monitorar(): String
+}
+
+class Plant {
+  -id: int
+  -nome: String
+  -tipo: String
+  -necessidadeHidrica: double
+  +calcularConsumoAgua(): double
+  +calcularConsumoAgua(evapotranspiracao: double): double
+  +monitorar(): String
+}
+
+class Weather {
+  -temperatura: double
+  -umidade: double
+  -precipitacao: double
+  +calcularEvapotranspiracao(): double
+  +monitorar(): String
+}
+
+class SoilLayer {
+  -profundidade: double
+  -umidadeAtual: double
+  -capacidadeRetencao: double
+  +calcularInfiltracao(): double
+  +calcularPercentualDeficit(): double
+}
+
+class SoilProfile {
+  -listaCamadas: List<SoilLayer>
+  +adicionarCamada(camada: SoilLayer): void
+  +calcularBalancoHidrico(): double
+  +calcularDeficitMedio(): double
+}
+
+class IrrigationSystem {
+  -volumeAgua: double
+  -horarioIrrigacao: String
+  -emExecucao: boolean
+  +iniciarIrrigacao(): String
+  +pararIrrigacao(): String
+}
+
+class PlantDAO {
+  -arquivo: Path
+  +salvar(plant: Plant): Plant
+  +listar(): List<Plant>
+  +buscarPorId(id: int): Optional<Plant>
+  +atualizar(plant: Plant): Plant
+  +excluir(id: int): boolean
+}
+
+class IrrigationService {
+  +calcularRecomendacao(plant: Plant, weather: Weather, soil: SoilProfile): IrrigationRecommendation
+}
+
+class IrrigationRecommendation
+class TelaPrincipal
+
+Plant ..|> Monitoravel
+Weather ..|> Monitoravel
+SoilProfile "1" *-- "1..*" SoilLayer
+PlantDAO ..> Plant
+IrrigationService ..> Plant
+IrrigationService ..> Weather
+IrrigationService ..> SoilProfile
+IrrigationService --> IrrigationRecommendation
+TelaPrincipal ..> PlantDAO
+TelaPrincipal ..> IrrigationService
+TelaPrincipal ..> IrrigationSystem
+@enduml

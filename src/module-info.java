@@ -1,3 +1,3 @@
 module ProgAvancSistIrriga {
-	requires java.desktop;
+    requires java.desktop;
 }
