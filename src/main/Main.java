@@ -1,37 +1,87 @@
 package main;
 
+import Model.IrrigationSystem;
 import Model.Plant;
-import Model.Weather;
 import Model.SoilLayer;
 import Model.SoilProfile;
-import Model.IrrigationSystem;
+import Model.Weather;
 import dao.PlantDAO;
+import exception.UmidadeInvalidaException;
+import service.IrrigationRecommendation;
+import service.IrrigationService;
 import view.TelaPrincipal;
+
+import java.awt.EventQueue;
+import java.io.IOException;
+import java.util.List;
+import javax.swing.UIManager;
 
 public class Main {
 
     public static void main(String[] args) {
+        if (args.length > 0 && "--demo".equalsIgnoreCase(args[0])) {
+            executarDemonstracaoConsole();
+            return;
+        }
 
-        Weather clima = new Weather(30, 70, 10);
-        Plant planta = new Plant("Milho", "Grão", 50);
+        configurarAparencia();
+        EventQueue.invokeLater(() -> {
+            try {
+                new TelaPrincipal(new PlantDAO()).setVisible(true);
+            } catch (Exception exception) {
+                exception.printStackTrace();
+            }
+        });
+    }
 
-        SoilLayer camada = new SoilLayer(20, 60, 90);
+    private static void configurarAparencia() {
+        try {
+            for (UIManager.LookAndFeelInfo info : UIManager.getInstalledLookAndFeels()) {
+                if ("Nimbus".equals(info.getName())) {
+                    UIManager.setLookAndFeel(info.getClassName());
+                    break;
+                }
+            }
+        } catch (Exception ignored) {
+            // Mantém o tema padrão quando Nimbus não estiver disponível.
+        }
+    }
 
-        SoilProfile perfil = new SoilProfile();
-        perfil.adicionarCamada(camada);
+    private static void executarDemonstracaoConsole() {
+        try {
+            PlantDAO dao = new PlantDAO();
+            List<Plant> plantas = dao.listar();
+            Plant planta;
+            if (plantas.isEmpty()) {
+                planta = dao.salvar(new Plant("Milho", "Grão", 50));
+                System.out.println("Planta de demonstração cadastrada e persistida.");
+            } else {
+                planta = plantas.get(0);
+            }
 
-        IrrigationSystem irrigacao = new IrrigationSystem(1000, "08:00");
+            Weather clima = new Weather(30, 70, 10);
+            SoilProfile perfil = new SoilProfile();
+            perfil.adicionarCamada(new SoilLayer(20, 45, 90));
 
-        PlantDAO dao = new PlantDAO();
-        dao.salvar(planta);
+            IrrigationRecommendation resultado = new IrrigationService()
+                    .calcularRecomendacao(planta, clima, perfil);
+            IrrigationSystem irrigacao = new IrrigationSystem(
+                    resultado.getVolumeRecomendado(), "08:00");
 
-        System.out.println("Evapotranspiração: " + clima.calcularEvapotranspiracao());
-        System.out.println("Consumo de água: " + planta.calcularConsumoAgua());
-        System.out.println("Balanço hídrico: " + perfil.calcularBalancoHidrico());
-
-        irrigacao.iniciarIrrigacao();
-
-        TelaPrincipal tela = new TelaPrincipal();
-        tela.setVisible(true);
+            System.out.println(planta.monitorar());
+            System.out.println(clima.monitorar());
+            System.out.printf("Evapotranspiração estimada: %.2f mm/dia%n",
+                    resultado.getEvapotranspiracao());
+            System.out.printf("Umidade média do solo: %.2f%%%n",
+                    resultado.getUmidadeMediaSolo());
+            System.out.printf("Déficit médio do solo: %.2f%%%n",
+                    resultado.getDeficitMedioSolo());
+            System.out.printf("Volume recomendado: %.2f L%n",
+                    resultado.getVolumeRecomendado());
+            System.out.println(resultado.getJustificativa());
+            System.out.println(irrigacao.iniciarIrrigacao());
+        } catch (IOException | UmidadeInvalidaException | IllegalArgumentException exception) {
+            System.err.println("Não foi possível executar a demonstração: " + exception.getMessage());
+        }
     }
 }
